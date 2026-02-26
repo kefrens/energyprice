@@ -1,0 +1,40 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Supplier {
+  id     Int     @id @default(autoincrement())
+  name   String  @unique
+  offers Offer[]
+}
+
+model Offer {
+  id          Int     @id @default(autoincrement())
+  name        String
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
+  supplierId  Int
+  prices      Price[]
+
+  @@unique([name, supplierId])
+}
+
+model Price {
+  id                Int      @id @default(autoincrement())
+  priceKwh          Float
+  subscriptionPrice Float
+  validFrom         DateTime
+  validTo           DateTime?
+  offer             Offer    @relation(fields: [offerId], references: [id])
+  offerId           Int
+}
