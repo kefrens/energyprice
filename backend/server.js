@@ -62,11 +62,17 @@ app.get("/suppliers", apiKeyMiddleware, async (req, res) => {
 });
 
 // Get offers by supplier
-app.get("/offers/:supplierId", async (req, res) => {
-  const offers = await prisma.offer.findMany({
-    where: { supplierId: parseInt(req.params.supplierId) },
-  });
-  res.json(offers);
+app.get("/offers/:supplierId", apiKeyMiddleware, async (req, res) => {
+  try {
+    const offers = await prisma.offer.findMany({
+      where: { supplierId: parseInt(req.params.supplierId, 10) },
+      orderBy: { name: "asc" },
+    });
+    res.json(offers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // Get current price for an offer

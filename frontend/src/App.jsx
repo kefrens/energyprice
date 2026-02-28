@@ -50,14 +50,18 @@ function App() {
   };
 
   const createOffer = async () => {
-    await axios.post(
-      `${API_URL}/admin/offers`,
-      { name: newOffer, supplierId: selectedSupplier },
-      { headers: { "x-api-key": API_KEY } }
-    );
+    try {
+      await axios.post(
+        `${API_URL}/admin/offers`,
+        { name: newOffer, supplierId: selectedSupplier },
+        { headers: { "x-api-key": API_KEY } }
+      );
 
-    setNewOffer("");
-    fetchOffers(selectedSupplier);
+      setNewOffer("");
+      fetchOffers(selectedSupplier);
+    } catch (err) {
+      alert(err.response?.data?.error || "Error creating offer");
+    }
   };
 
   const createPrice = async () => {
