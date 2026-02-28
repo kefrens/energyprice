@@ -7,6 +7,10 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use((req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
 
 const API_KEY = "mysecretkey";
 
@@ -44,20 +48,18 @@ app.get("/ping", (req, res) => {
 
 // Suppliers endpoint - requires API key authentication
 app.get("/suppliers", apiKeyMiddleware, async (req, res) => {
-//app.get("/suppliers", (req, res) => {
-    res.json([{ test: "ok" }]);
-  });
+  try {
+    const suppliers = await prisma.supplier.findMany({
+      orderBy: { name: "asc" },
+    });
 
-// Get all suppliers
-//app.get("/suppliers", async (req, res) => {
-//  try {
-//    const suppliers = await prisma.supplier.findMany();
-//    res.json(suppliers);
-//  } catch (error) {
-//    console.error(error);
-//    res.status(500).json({ error: "Internal server error" });
-//  }
-//});
+    res.json(suppliers);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 // Get offers by supplier
 app.get("/offers/:supplierId", async (req, res) => {
@@ -90,10 +92,12 @@ app.get("/prices/current/:offerId", async (req, res) => {
 app.post("/admin/prices/:offerId", apiKeyMiddleware, async (req, res) => {
     try {
       const offerId = parseInt(req.params.offerId, 10);
-      const { priceKwh, subscriptionPrice } = req.body;
-  
-      const now = new Date();
-  
+      const { priceKwh, subscriptionPrice, validFrom } = req.body;
+
+      const effectiveDate = validFrom
+        ? new Date(validFrom + "T00:00:00Z")
+        : new Date();
+
       const result = await prisma.$transaction(async (tx) => {
         
         // 1️⃣ Trouver le prix actif
@@ -109,7 +113,7 @@ app.post("/admin/prices/:offerId", apiKeyMiddleware, async (req, res) => {
           await tx.price.update({
             where: { id: activePrice.id },
             data: {
-              validTo: now,
+              validTo: effectiveDate,
             },
           });
         }
@@ -120,7 +124,7 @@ app.post("/admin/prices/:offerId", apiKeyMiddleware, async (req, res) => {
             offerId,
             priceKwh,
             subscriptionPrice,
-            validFrom: now,
+            validFrom: effectiveDate,
             validTo: null,
           },
         });
@@ -189,6 +193,99 @@ app.post("/admin/prices/:offerId", apiKeyMiddleware, async (req, res) => {
       res.status(500).json({ error: "Internal server error" });
     }
   });
+
+  // Create a new supplier
+  app.post("/admin/suppliers", apiKeyMiddleware, async (req, res) => {
+    try {
+      const { name } = req.body;
+  
+      if (!name) {
+        return res.status(400).json({ error: "Name is required" });
+      }
+  
+      const supplier = await prisma.supplier.create({
+        data: { name },
+      });
+  
+      res.json(supplier);
+  
+    } catch (error) {
+      if (error.code === "P2002") {
+        return res.status(409).json({ error: "Supplier already exists" });
+      }
+  
+      console.error(error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Create a new offer
+  app.post("/admin/offers", apiKeyMiddleware, async (req, res) => {
+    try {
+      const { name, supplierId } = req.body;
+  
+      if (!name || !supplierId) {
+        return res.status(400).json({ error: "Missing fields" });
+      }
+  
+      const offer = await prisma.offer.create({
+        data: {
+          name,
+          supplierId: parseInt(supplierId, 10),
+        },
+      });
+  
+      res.json(offer);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/admin/tariff-types", apiKeyMiddleware, async (req, res) => {
+    try {
+      const { name, offerId } = req.body;
+  
+      if (!name || !offerId) {
+        return res.status(400).json({ error: "Missing fields" });
+      }
+  
+      const tariffType = await prisma.tariffType.create({
+        data: {
+          name,
+          offerId: parseInt(offerId, 10),
+        },
+      });
+  
+      res.json(tariffType);
+  
+    } catch (error) {
+      if (error.code === "P2002") {
+        return res.status(409).json({ error: "Tariff type already exists" });
+      }
+  
+      console.error(error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/tariff-types/:offerId", apiKeyMiddleware, async (req, res) => {
+    try {
+      const offerId = parseInt(req.params.offerId, 10);
+  
+      const tariffTypes = await prisma.tariffType.findMany({
+        where: { offerId },
+        orderBy: { name: "asc" },
+      });
+  
+      res.json(tariffTypes);
+  
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
 
 app.listen(3000, "127.0.0.1", () => {
     console.log("Server running on http://127.0.0.1:3000");
