@@ -26,6 +26,7 @@ model Offer {
   supplierId  Int
 
   tariffTypes TariffType[]
+  prices      Price[]
 
   @@unique([name, supplierId])
 }
