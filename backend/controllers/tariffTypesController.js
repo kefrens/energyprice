@@ -44,3 +44,22 @@ module.exports = {
   createTariffType,
   getTariffTypesByOffer,
 };
+// Delete tariff type by ID
+async function deleteTariffType(req, res) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: "Invalid tariff type ID" });
+    }
+    await prisma.tariffType.delete({ where: { id } });
+    res.sendStatus(204);
+  } catch (error) {
+    if (error.code === "P2025") {
+      return res.status(404).json({ error: "Tariff type not found" });
+    }
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+module.exports.deleteTariffType = deleteTariffType;

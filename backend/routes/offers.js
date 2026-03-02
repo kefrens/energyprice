@@ -1,12 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const apiKey = require("../middleware/apiKey");
-const { getOffersBySupplier, createOffer } = require("../controllers/offersController");
+const { getOffersBySupplier, createOffer, deleteOffer } = require("../controllers/offersController");
 
-// public (but still guarded by key in current design)
+// list by supplier is used both public and admin
 router.get("/:supplierId", apiKey, getOffersBySupplier);
 
-// administrative creation
+// administrative create/delete (router may be mounted at /offers or /admin/offers)
 router.post("/", apiKey, createOffer);
+router.delete("/:id", apiKey, deleteOffer);
 
 module.exports = router;

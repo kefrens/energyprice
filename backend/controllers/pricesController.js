@@ -12,6 +12,14 @@ async function getCurrentPrice(req, res) {
         validFrom: { lte: today },
         OR: [{ validTo: null }, { validTo: { gte: today } }],
       },
+      select: {
+        id: true,
+        priceKwh: true,
+        subscriptionPrice: true,
+        validFrom: true,
+        validTo: true,
+        tariffTypeId: true,
+      },
     });
 
     res.json(price);
@@ -70,9 +78,18 @@ async function createPrice(req, res) {
 async function getPriceHistory(req, res) {
   try {
     const offerId = parseInt(req.params.offerId, 10);
+    // explicitly select fields to avoid errors if schema mismatch
     const prices = await prisma.price.findMany({
       where: { offerId },
       orderBy: { validFrom: "asc" },
+      select: {
+        id: true,
+        priceKwh: true,
+        subscriptionPrice: true,
+        validFrom: true,
+        validTo: true,
+        tariffTypeId: true,
+      },
     });
     res.json(prices);
   } catch (error) {
@@ -104,6 +121,14 @@ async function getPriceByDate(req, res) {
           { validTo: { gte: targetDate } },
         ],
       },
+      select: {
+        id: true,
+        priceKwh: true,
+        subscriptionPrice: true,
+        validFrom: true,
+        validTo: true,
+        tariffTypeId: true,
+      },
     });
 
     if (!price) {
@@ -123,3 +148,22 @@ module.exports = {
   getPriceHistory,
   getPriceByDate,
 };
+// Delete price by ID
+async function deletePrice(req, res) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: "Invalid price ID" });
+    }
+    await prisma.price.delete({ where: { id } });
+    res.sendStatus(204);
+  } catch (error) {
+    if (error.code === "P2025") {
+      return res.status(404).json({ error: "Price not found" });
+    }
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+module.exports.deletePrice = deletePrice;
