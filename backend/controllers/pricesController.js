@@ -6,23 +6,30 @@ async function getCurrentPrice(req, res) {
   try {
     const offerId = parseInt(req.params.offerId, 10);
 
-    const price = await prisma.price.findFirst({
+    const prices = await prisma.price.findMany({
       where: {
-        offerId,
+        tariffType: {
+          offerId: offerId
+        },
         validFrom: { lte: today },
         OR: [{ validTo: null }, { validTo: { gte: today } }],
       },
-      select: {
-        id: true,
-        priceKwh: true,
-        subscriptionPrice: true,
-        validFrom: true,
-        validTo: true,
-        tariffTypeId: true,
-      },
+      include: {
+        tariffType: true
+      }
     });
 
-    res.json(price);
+    // Group by tariff type and pick the latest valid price for each
+    const priceMap = {};
+    prices.forEach(price => {
+      const typeId = price.tariffTypeId;
+      if (!priceMap[typeId] || price.validFrom > priceMap[typeId].validFrom) {
+        priceMap[typeId] = price;
+      }
+    });
+
+    const result = Object.values(priceMap);
+    res.json(result);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
@@ -32,7 +39,7 @@ async function getCurrentPrice(req, res) {
 async function createPrice(req, res) {
   try {
     const offerId = parseInt(req.params.offerId, 10);
-    const { priceKwh, subscriptionPrice, validFrom } = req.body;
+    const { priceKwh, tariffTypeId, validFrom } = req.body;
 
     const effectiveDate = validFrom
       ? new Date(validFrom + "T00:00:00Z")
@@ -41,7 +48,7 @@ async function createPrice(req, res) {
     const result = await prisma.$transaction(async (tx) => {
       const activePrice = await tx.price.findFirst({
         where: {
-          offerId,
+          tariffTypeId: tariffTypeId,
           validTo: null,
         },
       });
@@ -57,9 +64,8 @@ async function createPrice(req, res) {
 
       const newPrice = await tx.price.create({
         data: {
-          offerId,
           priceKwh,
-          subscriptionPrice,
+          tariffTypeId,
           validFrom: effectiveDate,
           validTo: null,
         },
@@ -80,12 +86,15 @@ async function getPriceHistory(req, res) {
     const offerId = parseInt(req.params.offerId, 10);
     // explicitly select fields to avoid errors if schema mismatch
     const prices = await prisma.price.findMany({
-      where: { offerId },
+      where: {
+        tariffType: {
+          offerId: offerId
+        }
+      },
       orderBy: { validFrom: "asc" },
       select: {
         id: true,
         priceKwh: true,
-        subscriptionPrice: true,
         validFrom: true,
         validTo: true,
         tariffTypeId: true,
@@ -114,7 +123,9 @@ async function getPriceByDate(req, res) {
 
     const price = await prisma.price.findFirst({
       where: {
-        offerId,
+        tariffType: {
+          offerId: offerId
+        },
         validFrom: { lte: targetDate },
         OR: [
           { validTo: null },
@@ -124,7 +135,6 @@ async function getPriceByDate(req, res) {
       select: {
         id: true,
         priceKwh: true,
-        subscriptionPrice: true,
         validFrom: true,
         validTo: true,
         tariffTypeId: true,

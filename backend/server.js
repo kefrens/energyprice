@@ -10,22 +10,12 @@ const tariffRouter = require("./routes/tariffTypes");
 
 const app = express();
 
-// ensure database columns match current Prisma schema
+// prisma client for database access
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-async function ensureSchema() {
-  try {
-    const cols = await prisma.$queryRaw`PRAGMA table_info("Price")`;
-    if (!cols.some((c) => c.name === "subscriptionPrice")) {
-      console.log("adding missing subscriptionPrice column to Price table");
-      await prisma.$executeRaw`ALTER TABLE "Price" ADD COLUMN "subscriptionPrice" REAL NOT NULL DEFAULT 0`;
-    }
-  } catch (e) {
-    console.error("schema check failed", e);
-  }
-}
-ensureSchema();
+// schema migrations are handled by Prisma; no runtime adjustments needed
+
 
 app.use(cors());
 app.use(express.json());

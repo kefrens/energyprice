@@ -12,12 +12,20 @@ function App() {
   const [newOffer, setNewOffer] = useState("");
   const [selectedOffer, setSelectedOffer] = useState("");
   const [priceKwh, setPriceKwh] = useState("");
-  const [subscriptionPrice, setSubscriptionPrice] = useState("");
   const [priceDate, setPriceDate] = useState("");
+  const [tariffTypes, setTariffTypes] = useState([]);
+  const [selectedTariffType, setSelectedTariffType] = useState("");
+  const [newTariffType, setNewTariffType] = useState("");
+  const [prices, setPrices] = useState([]);
 
   useEffect(() => {
     fetchSuppliers();
   }, []);
+
+  useEffect(() => {
+    fetchTariffTypes(selectedOffer);
+    fetchPrices(selectedOffer);
+  }, [selectedOffer]);
 
   const fetchSuppliers = async () => {
     const res = await axios.get(`${API_URL}/suppliers`, {
@@ -26,11 +34,59 @@ function App() {
     setSuppliers(res.data);
   };
 
+  const fetchTariffTypes = async (offerId) => {
+    if (!offerId) {
+      setTariffTypes([]);
+      return;
+    }
+    try {
+      const res = await axios.get(`${API_URL}/tariff-types/${offerId}`, {
+        headers: { "x-api-key": API_KEY },
+      });
+      setTariffTypes(res.data);
+    } catch (err) {
+      console.error("Error fetching tariff types:", err);
+    }
+  };
+
+  const fetchPrices = async (offerId) => {
+    if (!offerId) {
+      setPrices([]);
+      return;
+    }
+    try {
+      const res = await axios.get(`${API_URL}/prices/history/${offerId}`, {
+        headers: { "x-api-key": API_KEY },
+      });
+      setPrices(res.data);
+    } catch (err) {
+      console.error("Error fetching prices:", err);
+    }
+  };
+
   const fetchOffers = async (supplierId) => {
     const res = await axios.get(`${API_URL}/offers/${supplierId}`, {
       headers: { "x-api-key": API_KEY },
     });
     setOffers(res.data);
+  };
+
+  const createTariffType = async () => {
+    if (!selectedOffer) {
+      alert("Select an offer first");
+      return;
+    }
+    try {
+      await axios.post(
+        `${API_URL}/admin/tariff-types`,
+        { name: newTariffType, offerId: selectedOffer },
+        { headers: { "x-api-key": API_KEY } }
+      );
+      setNewTariffType("");
+      fetchTariffTypes(selectedOffer);
+    } catch (err) {
+      alert(err.response?.data?.error || "Error creating tariff type");
+    }
   };
 
   const createSupplier = async () => {
@@ -70,17 +126,17 @@ function App() {
         `${API_URL}/admin/prices/${selectedOffer}`,
         {
           priceKwh: parseFloat(priceKwh),
-          subscriptionPrice: parseFloat(subscriptionPrice),
+          tariffTypeId: parseInt(selectedTariffType),
           validFrom: priceDate,
         },
         { headers: { "x-api-key": API_KEY } }
       );
-  
+
       alert("Price created!");
       setPriceKwh("");
-      setSubscriptionPrice("");
+      setSelectedTariffType("");
       setPriceDate("");
-  
+      fetchPrices(selectedOffer); // Refresh prices
     } catch (err) {
       alert(err.response?.data?.error || "Error creating price");
     }
@@ -111,6 +167,9 @@ function App() {
             fetchOffers(supplierId);
           } else {
             setOffers([]);
+            setSelectedOffer("");
+            setTariffTypes([]);
+            setPrices([]);
           }
         }}
       >
@@ -153,6 +212,21 @@ function App() {
 
           {selectedOffer && (
             <>
+              <h3>Tariff Types</h3>
+              <ul>
+                {tariffTypes.map((t) => (
+                  <li key={t.id}>{t.name}</li>
+                ))}
+              </ul>
+
+              <h4>Create Tariff Type</h4>
+              <input
+                value={newTariffType}
+                onChange={(e) => setNewTariffType(e.target.value)}
+                placeholder="Tariff type name"
+              />
+              <button onClick={createTariffType}>Add Type</button>
+
               <h3>Add Price</h3>
               <input
                 type="number"
@@ -161,19 +235,48 @@ function App() {
                 value={priceKwh}
                 onChange={(e) => setPriceKwh(e.target.value)}
               />
-              <input
-                type="number"
-                step="0.01"
-                placeholder="Subscription price"
-                value={subscriptionPrice}
-                onChange={(e) => setSubscriptionPrice(e.target.value)}
-              />
+              <select
+                value={selectedTariffType}
+                onChange={(e) => setSelectedTariffType(e.target.value)}
+              >
+                <option value="">-- Select Tariff Type --</option>
+                {tariffTypes.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
               <input
                 type="date"
                 value={priceDate}
                 onChange={(e) => setPriceDate(e.target.value)}
               />
               <button onClick={createPrice}>Create Price</button>
+
+              <h3>Prices</h3>
+              {prices.length === 0 ? (
+                <p>No prices found for this offer.</p>
+              ) : (
+                <div>
+                  {tariffTypes.map((tariffType) => {
+                    const tariffPrices = prices.filter(p => p.tariffTypeId === tariffType.id);
+                    if (tariffPrices.length === 0) return null;
+                    return (
+                      <div key={tariffType.id} style={{ marginBottom: 20 }}>
+                        <h4>{tariffType.name}</h4>
+                        <ul>
+                          {tariffPrices.map((price) => (
+                            <li key={price.id}>
+                              {price.priceKwh} €/kWh - Valid from: {new Date(price.validFrom).toLocaleDateString()}
+                              {price.validTo && ` to ${new Date(price.validTo).toLocaleDateString()}`}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </>
           )}
         </>

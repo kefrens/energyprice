@@ -33,12 +33,20 @@ async function main() {
   
   const offerId = offer.id;
 
+  // create a default tariff type for the offer
+  const tariffType = await prisma.tariffType.upsert({
+    where: { name_offerId: { name: "HC", offerId } },
+    update: {},
+    create: { name: "HC", offerId },
+  });
+  const tariffTypeId = tariffType.id;
+
   // Prix janvier
   await prisma.price.create({
     data: {
       offerId,
+      tariffTypeId,
       priceKwh: 0.18,
-      subscriptionPrice: 12,
       validFrom: new Date("2026-01-01T00:00:00Z"),
       validTo: new Date("2026-02-01T00:00:00Z"),
     },
@@ -48,8 +56,8 @@ async function main() {
   await prisma.price.create({
     data: {
       offerId,
+      tariffTypeId,
       priceKwh: 0.20,
-      subscriptionPrice: 12.5,
       validFrom: new Date("2026-02-01T00:00:00Z"),
       validTo: new Date("2026-03-01T00:00:00Z"),
     },
@@ -59,8 +67,8 @@ async function main() {
   await prisma.price.create({
     data: {
       offerId,
+      tariffTypeId,
       priceKwh: 0.25,
-      subscriptionPrice: 13,
       validFrom: new Date("2026-03-01T00:00:00Z"),
       validTo: null,
     },

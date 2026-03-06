@@ -26,7 +26,6 @@ model Offer {
   supplierId  Int
 
   tariffTypes TariffType[]
-  prices      Price[]
 
   @@unique([name, supplierId])
 }
@@ -36,16 +35,18 @@ model TariffType {
   name     String
   offer    Offer   @relation(fields: [offerId], references: [id])
   offerId  Int
+
+  prices   Price[]
+
   @@unique([name, offerId])
 }
 
 model Price {
-  id                Int    @id @default(autoincrement())
-  priceKwh          Float
-  subscriptionPrice Float
-  validFrom         DateTime
-  validTo           DateTime?
+  id            Int       @id @default(autoincrement())
+  priceKwh      Float
+  validFrom     DateTime
+  validTo       DateTime?
 
-  offer   Offer @relation(fields: [offerId], references: [id])
-  offerId Int
+  tariffType    TariffType @relation(fields: [tariffTypeId], references: [id])
+  tariffTypeId  Int
 }
