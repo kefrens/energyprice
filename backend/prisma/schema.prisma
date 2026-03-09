@@ -22,10 +22,14 @@ model Supplier {
 }
 
 model Offer {
-  id          Int     @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   name        String
   supplier    Supplier @relation(fields: [supplierId], references: [id])
   supplierId  Int
+
+  startDate   DateTime @default(now())
+  endDate     DateTime?
+  active      Boolean  @default(true)
 
   tariffTypes TariffType[]
 

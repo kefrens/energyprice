@@ -12,7 +12,11 @@ function App() {
   const [newSupplierActive, setNewSupplierActive] = useState(true);
   const [newSupplierLogoUrl, setNewSupplierLogoUrl] = useState("");
   const [newOffer, setNewOffer] = useState("");
+  const [newOfferStartDate, setNewOfferStartDate] = useState("");
+  const [newOfferEndDate, setNewOfferEndDate] = useState("");
+  const [newOfferActive, setNewOfferActive] = useState(true);
   const [selectedOffer, setSelectedOffer] = useState("");
+  const [editingOffer, setEditingOffer] = useState(null); // {id, name, startDate, endDate, active}
   const [priceKwh, setPriceKwh] = useState("");
   const [priceDate, setPriceDate] = useState("");
   const [tariffTypes, setTariffTypes] = useState([]);
@@ -70,7 +74,12 @@ function App() {
     const res = await axios.get(`${API_URL}/offers/${supplierId}`, {
       headers: { "x-api-key": API_KEY },
     });
-    setOffers(res.data);
+    // backend may not always return active field (older server); default to true
+    const offersWithDefaults = res.data.map((o) => ({
+      active: o.active !== undefined ? o.active : true,
+      ...o,
+    }));
+    setOffers(offersWithDefaults);
   };
 
   const deleteSupplier = async (supplierId) => {
@@ -173,16 +182,44 @@ function App() {
 
   const createOffer = async () => {
     try {
+      const payload = {
+        name: newOffer,
+        supplierId: selectedSupplier,
+        startDate: newOfferStartDate || undefined,
+        endDate: newOfferEndDate || undefined,
+        active: newOfferActive,
+      };
       await axios.post(
         `${API_URL}/admin/offers`,
-        { name: newOffer, supplierId: selectedSupplier },
+        payload,
         { headers: { "x-api-key": API_KEY } }
       );
 
       setNewOffer("");
+      setNewOfferStartDate("");
+      setNewOfferEndDate("");
+      setNewOfferActive(true);
       fetchOffers(selectedSupplier);
     } catch (err) {
       alert(err.response?.data?.error || "Error creating offer");
+    }
+  };
+
+  const updateOffer = async () => {
+    try {
+      const payload = {};
+      if (editingOffer.name !== undefined) payload.name = editingOffer.name;
+      if (editingOffer.startDate !== undefined) payload.startDate = editingOffer.startDate || null;
+      if (editingOffer.endDate !== undefined) payload.endDate = editingOffer.endDate || null;
+      if (editingOffer.active !== undefined) payload.active = editingOffer.active;
+
+      await axios.put(`${API_URL}/admin/offers/${editingOffer.id}`, payload, {
+        headers: { "x-api-key": API_KEY },
+      });
+      setEditingOffer(null);
+      fetchOffers(selectedSupplier);
+    } catch (err) {
+      alert(err.response?.data?.error || "Error updating offer");
     }
   };
 
@@ -307,13 +344,74 @@ function App() {
             onChange={(e) => setNewOffer(e.target.value)}
             placeholder="Offer name"
           />
+          <input
+            type="date"
+            value={newOfferStartDate}
+            onChange={(e) => setNewOfferStartDate(e.target.value)}
+            placeholder="Start date"
+          />
+          <input
+            type="date"
+            value={newOfferEndDate}
+            onChange={(e) => setNewOfferEndDate(e.target.value)}
+            placeholder="End date"
+          />
+          <label>
+            <input
+              type="checkbox"
+              checked={newOfferActive}
+              onChange={(e) => setNewOfferActive(e.target.checked)}
+            /> Active
+          </label>
           <button onClick={createOffer}>Create Offer</button>
+
+          {editingOffer && (
+            <div style={{ marginTop: 20, padding: 10, border: '1px solid #ccc' }}>
+              <h4>Edit Offer</h4>
+              <input
+                value={editingOffer.name}
+                onChange={(e) => setEditingOffer({...editingOffer, name: e.target.value})}
+              />
+              <input
+                type="date"
+                value={editingOffer.startDate || ''}
+                onChange={(e) => setEditingOffer({...editingOffer, startDate: e.target.value})}
+              />
+              <input
+                type="date"
+                value={editingOffer.endDate || ''}
+                onChange={(e) => setEditingOffer({...editingOffer, endDate: e.target.value})}
+              />
+              <label>
+                <input
+                  type="checkbox"
+                  checked={editingOffer.active}
+                  onChange={(e) => setEditingOffer({...editingOffer, active: e.target.checked})}
+                /> Active
+              </label>
+              <button onClick={updateOffer}>Save</button>
+              <button onClick={() => setEditingOffer(null)}>Cancel</button>
+            </div>
+          )}
 
           <h3>Offers</h3>
           <ul>
             {offers.map((o) => (
               <li key={o.id}>
-                {o.name} <button onClick={() => deleteOffer(o.id)}>Delete</button>
+                <span style={{ textDecoration: o.active ? 'none' : 'line-through', opacity: o.active ? 1 : 0.6 }}>
+                  {o.name}
+                  {o.startDate && ` (from ${new Date(o.startDate).toLocaleDateString()}`}
+                  {o.endDate && ` to ${new Date(o.endDate).toLocaleDateString()}`}
+                  {o.startDate && ')'}
+                </span>
+                <button onClick={() => setEditingOffer({
+                  id: o.id,
+                  name: o.name,
+                  startDate: o.startDate ? o.startDate.slice(0,10) : "",
+                  endDate: o.endDate ? o.endDate.slice(0,10) : "",
+                  active: o.active,
+                })}>Edit</button>
+                <button onClick={() => deleteOffer(o.id)}>Delete</button>
               </li>
             ))}
           </ul>
@@ -324,7 +422,7 @@ function App() {
             onChange={(e) => setSelectedOffer(e.target.value)}
           >
             <option value="">-- Select Offer --</option>
-            {offers.map((o) => (
+            {offers.filter(o => o.active).map((o) => (
               <option key={o.id} value={o.id}>
                 {o.name}
               </option>
