@@ -15,14 +15,18 @@ async function listSuppliers(req, res) {
 
 async function createSupplier(req, res) {
   try {
-    const { name } = req.body;
+    const { name, active, logoUrl } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: "Name is required" });
     }
 
     const supplier = await prisma.supplier.create({
-      data: { name },
+      data: { 
+        name,
+        active: active !== undefined ? active : true,
+        logoUrl: logoUrl || null
+      },
     });
 
     res.json(supplier);
@@ -40,6 +44,41 @@ module.exports = {
   listSuppliers,
   createSupplier,
 };
+
+// Update supplier by ID
+async function updateSupplier(req, res) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: "Invalid supplier ID" });
+    }
+
+    const { name, active, logoUrl } = req.body;
+    const updateData = {};
+
+    if (name !== undefined) updateData.name = name;
+    if (active !== undefined) updateData.active = active;
+    if (logoUrl !== undefined) updateData.logoUrl = logoUrl;
+
+    const supplier = await prisma.supplier.update({
+      where: { id },
+      data: updateData,
+    });
+
+    res.json(supplier);
+  } catch (error) {
+    if (error.code === "P2025") {
+      return res.status(404).json({ error: "Supplier not found" });
+    }
+    if (error.code === "P2002") {
+      return res.status(409).json({ error: "Supplier name already exists" });
+    }
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+module.exports.updateSupplier = updateSupplier;
 
 // Delete supplier by ID
 async function deleteSupplier(req, res) {

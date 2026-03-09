@@ -9,6 +9,8 @@ function App() {
   const [offers, setOffers] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState("");
   const [newSupplier, setNewSupplier] = useState("");
+  const [newSupplierActive, setNewSupplierActive] = useState(true);
+  const [newSupplierLogoUrl, setNewSupplierLogoUrl] = useState("");
   const [newOffer, setNewOffer] = useState("");
   const [selectedOffer, setSelectedOffer] = useState("");
   const [priceKwh, setPriceKwh] = useState("");
@@ -34,21 +36,6 @@ function App() {
     setSuppliers(res.data);
   };
 
-  const fetchTariffTypes = async (offerId) => {
-    if (!offerId) {
-      setTariffTypes([]);
-      return;
-    }
-    try {
-      const res = await axios.get(`${API_URL}/tariff-types/${offerId}`, {
-        headers: { "x-api-key": API_KEY },
-      });
-      setTariffTypes(res.data);
-    } catch (err) {
-      console.error("Error fetching tariff types:", err);
-    }
-  };
-
   const fetchPrices = async (offerId) => {
     if (!offerId) {
       setPrices([]);
@@ -64,6 +51,21 @@ function App() {
     }
   };
 
+  const fetchTariffTypes = async (offerId) => {
+    if (!offerId) {
+      setTariffTypes([]);
+      return;
+    }
+    try {
+      const res = await axios.get(`${API_URL}/tariff-types/${offerId}`, {
+        headers: { "x-api-key": API_KEY },
+      });
+      setTariffTypes(res.data);
+    } catch (err) {
+      console.error("Error fetching tariff types:", err);
+    }
+  };
+
   const fetchOffers = async (supplierId) => {
     const res = await axios.get(`${API_URL}/offers/${supplierId}`, {
       headers: { "x-api-key": API_KEY },
@@ -71,21 +73,79 @@ function App() {
     setOffers(res.data);
   };
 
-  const createTariffType = async () => {
-    if (!selectedOffer) {
-      alert("Select an offer first");
-      return;
-    }
+  const deleteSupplier = async (supplierId) => {
+    if (!confirm("Are you sure you want to delete this supplier?")) return;
     try {
-      await axios.post(
-        `${API_URL}/admin/tariff-types`,
-        { name: newTariffType, offerId: selectedOffer },
-        { headers: { "x-api-key": API_KEY } }
-      );
-      setNewTariffType("");
-      fetchTariffTypes(selectedOffer);
+      await axios.delete(`${API_URL}/admin/suppliers/${supplierId}`, {
+        headers: { "x-api-key": API_KEY },
+      });
+      await fetchSuppliers();
+      if (selectedSupplier === supplierId) {
+        setSelectedSupplier("");
+        setOffers([]);
+        setSelectedOffer("");
+        setTariffTypes([]);
+        setPrices([]);
+      }
     } catch (err) {
-      alert(err.response?.data?.error || "Error creating tariff type");
+      console.error("Error deleting supplier:", err);
+      alert(err.response?.data?.error || "Error deleting supplier");
+    }
+  };
+
+  const updateSupplier = async (supplierId, updates) => {
+    try {
+      await axios.put(`${API_URL}/admin/suppliers/${supplierId}`, updates, {
+        headers: { "x-api-key": API_KEY },
+      });
+      await fetchSuppliers();
+    } catch (err) {
+      console.error("Error updating supplier:", err);
+      alert(err.response?.data?.error || "Error updating supplier");
+    }
+  };
+
+  const deleteOffer = async (offerId) => {
+    if (!confirm("Are you sure you want to delete this offer?")) return;
+    try {
+      await axios.delete(`${API_URL}/admin/offers/${offerId}`, {
+        headers: { "x-api-key": API_KEY },
+      });
+      await fetchOffers(selectedSupplier);
+      if (selectedOffer === offerId) {
+        setSelectedOffer("");
+        setTariffTypes([]);
+        setPrices([]);
+      }
+    } catch (err) {
+      console.error("Error deleting offer:", err);
+      alert(err.response?.data?.error || "Error deleting offer");
+    }
+  };
+
+  const deleteTariffType = async (tariffTypeId) => {
+    if (!confirm("Are you sure you want to delete this tariff type?")) return;
+    try {
+      await axios.delete(`${API_URL}/admin/tariff-types/${tariffTypeId}`, {
+        headers: { "x-api-key": API_KEY },
+      });
+      await fetchTariffTypes(selectedOffer);
+    } catch (err) {
+      console.error("Error deleting tariff type:", err);
+      alert(err.response?.data?.error || "Error deleting tariff type");
+    }
+  };
+
+  const deletePrice = async (priceId) => {
+    if (!confirm("Are you sure you want to delete this price?")) return;
+    try {
+      await axios.delete(`${API_URL}/admin/prices/${priceId}`, {
+        headers: { "x-api-key": API_KEY },
+      });
+      await fetchPrices(selectedOffer);
+    } catch (err) {
+      console.error("Error deleting price:", err);
+      alert(err.response?.data?.error || "Error deleting price");
     }
   };
 
@@ -93,11 +153,17 @@ function App() {
     try {
       await axios.post(
         `${API_URL}/admin/suppliers`,
-        { name: newSupplier },
+        { 
+          name: newSupplier,
+          active: newSupplierActive,
+          logoUrl: newSupplierLogoUrl || null
+        },
         { headers: { "x-api-key": API_KEY } }
       );
   
       setNewSupplier("");
+      setNewSupplierActive(true);
+      setNewSupplierLogoUrl("");
       await fetchSuppliers();
   
     } catch (err) {
@@ -142,6 +208,21 @@ function App() {
     }
   };
 
+  const createTariffType = async () => {
+    try {
+      await axios.post(
+        `${API_URL}/tariff-types`,
+        { name: newTariffType, offerId: selectedOffer },
+        { headers: { "x-api-key": API_KEY } }
+      );
+
+      setNewTariffType("");
+      fetchTariffTypes(selectedOffer); // Refresh tariff types
+    } catch (err) {
+      alert(err.response?.data?.error || "Error creating tariff type");
+    }
+  };
+
   console.log("SUPPLIERS:", suppliers);
 
   return (
@@ -154,7 +235,45 @@ function App() {
         onChange={(e) => setNewSupplier(e.target.value)}
         placeholder="Supplier name"
       />
+      <br />
+      <label>
+        <input
+          type="checkbox"
+          checked={newSupplierActive}
+          onChange={(e) => setNewSupplierActive(e.target.checked)}
+        />
+        Active
+      </label>
+      <br />
+      <input
+        value={newSupplierLogoUrl}
+        onChange={(e) => setNewSupplierLogoUrl(e.target.value)}
+        placeholder="Logo domain (e.g., edf.com)"
+      />
       <button onClick={createSupplier}>Create</button>
+
+      <h3>Suppliers</h3>
+      <ul>
+        {suppliers.map((s) => (
+          <li key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {s.logoUrl && (
+              <img 
+                src={`https://logos.hunter.io/${s.logoUrl}`} 
+                alt={`${s.name} logo`} 
+                style={{ height: '20px', width: 'auto' }}
+                onError={(e) => e.target.style.display = 'none'}
+              />
+            )}
+            <span style={{ textDecoration: !s.active ? 'line-through' : 'none', opacity: !s.active ? 0.6 : 1 }}>
+              {s.name} {!s.active && '(Inactive)'}
+            </span>
+            <button onClick={() => updateSupplier(s.id, { active: !s.active })}>
+              {s.active ? 'Deactivate' : 'Activate'}
+            </button>
+            <button onClick={() => deleteSupplier(s.id)}>Delete</button>
+          </li>
+        ))}
+      </ul>
 
       <h3>Select Supplier</h3>
       <select
@@ -174,7 +293,7 @@ function App() {
         }}
       >
         <option value="">-- Select --</option>
-        {suppliers.map((s) => (
+        {suppliers.filter(s => s.active).map((s) => (
           <option key={s.id} value={s.id}>
             {s.name}
           </option>
@@ -193,7 +312,9 @@ function App() {
           <h3>Offers</h3>
           <ul>
             {offers.map((o) => (
-              <li key={o.id}>{o.name}</li>
+              <li key={o.id}>
+                {o.name} <button onClick={() => deleteOffer(o.id)}>Delete</button>
+              </li>
             ))}
           </ul>
 
@@ -215,7 +336,9 @@ function App() {
               <h3>Tariff Types</h3>
               <ul>
                 {tariffTypes.map((t) => (
-                  <li key={t.id}>{t.name}</li>
+                  <li key={t.id}>
+                    {t.name} <button onClick={() => deleteTariffType(t.id)}>Delete</button>
+                  </li>
                 ))}
               </ul>
 
@@ -269,6 +392,7 @@ function App() {
                             <li key={price.id}>
                               {price.priceKwh} €/kWh - Valid from: {new Date(price.validFrom).toLocaleDateString()}
                               {price.validTo && ` to ${new Date(price.validTo).toLocaleDateString()}`}
+                              <button onClick={() => deletePrice(price.id)}>Delete</button>
                             </li>
                           ))}
                         </ul>
