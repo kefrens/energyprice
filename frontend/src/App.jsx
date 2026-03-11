@@ -9,9 +9,11 @@ function App() {
   const [offers, setOffers] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState("");
   const [newSupplier, setNewSupplier] = useState("");
+  const [newSupplierCode, setNewSupplierCode] = useState("");
   const [newSupplierActive, setNewSupplierActive] = useState(true);
   const [newSupplierLogoUrl, setNewSupplierLogoUrl] = useState("");
   const [newOffer, setNewOffer] = useState("");
+  const [newOfferCode, setNewOfferCode] = useState("");
   const [newOfferStartDate, setNewOfferStartDate] = useState("");
   const [newOfferEndDate, setNewOfferEndDate] = useState("");
   const [newOfferActive, setNewOfferActive] = useState(true);
@@ -49,9 +51,11 @@ function App() {
       const res = await axios.get(`${API_URL}/prices/history/${offerId}`, {
         headers: { "x-api-key": API_KEY },
       });
+      console.log("Prices fetched:", res.data);
       setPrices(res.data);
     } catch (err) {
       console.error("Error fetching prices:", err);
+      setPrices([]);
     }
   };
 
@@ -61,7 +65,7 @@ function App() {
       return;
     }
     try {
-      const res = await axios.get(`${API_URL}/tariff-types/${offerId}`, {
+      const res = await axios.get(`${API_URL}/tariff-types`, {
         headers: { "x-api-key": API_KEY },
       });
       setTariffTypes(res.data);
@@ -163,6 +167,7 @@ function App() {
       await axios.post(
         `${API_URL}/admin/suppliers`,
         { 
+          code: newSupplierCode,
           name: newSupplier,
           active: newSupplierActive,
           logoUrl: newSupplierLogoUrl || null
@@ -171,6 +176,7 @@ function App() {
       );
   
       setNewSupplier("");
+      setNewSupplierCode("");
       setNewSupplierActive(true);
       setNewSupplierLogoUrl("");
       await fetchSuppliers();
@@ -183,6 +189,7 @@ function App() {
   const createOffer = async () => {
     try {
       const payload = {
+        code: newOfferCode,
         name: newOffer,
         supplierId: selectedSupplier,
         startDate: newOfferStartDate || undefined,
@@ -196,6 +203,7 @@ function App() {
       );
 
       setNewOffer("");
+      setNewOfferCode("");
       setNewOfferStartDate("");
       setNewOfferEndDate("");
       setNewOfferActive(true);
@@ -248,8 +256,8 @@ function App() {
   const createTariffType = async () => {
     try {
       await axios.post(
-        `${API_URL}/tariff-types`,
-        { name: newTariffType, offerId: selectedOffer },
+        `${API_URL}/admin/tariff-types`,
+        { code: newTariffType, label: newTariffType },
         { headers: { "x-api-key": API_KEY } }
       );
 
@@ -267,6 +275,12 @@ function App() {
       <h2>Admin Energy Prices</h2>
 
       <h3>Create Supplier</h3>
+      <input
+        value={newSupplierCode}
+        onChange={(e) => setNewSupplierCode(e.target.value)}
+        placeholder="Supplier code (e.g., EDF)"
+      />
+      <br />
       <input
         value={newSupplier}
         onChange={(e) => setNewSupplier(e.target.value)}
@@ -295,7 +309,7 @@ function App() {
           <li key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {s.logoUrl && (
               <img 
-                src={`https://logos.hunter.io/${s.logoUrl}`} 
+                src={`${s.logoUrl}`} 
                 alt={`${s.name} logo`} 
                 style={{ height: '20px', width: 'auto' }}
                 onError={(e) => e.target.style.display = 'none'}
@@ -339,8 +353,12 @@ function App() {
       {selectedSupplier && (
         <>
           <h3>Create Offer</h3>
-          <input
-            value={newOffer}
+          <input            value={newOfferCode}
+            onChange={(e) => setNewOfferCode(e.target.value)}
+            placeholder="Offer code (e.g., TEMPO)"
+          />
+          <br />
+          <input            value={newOffer}
             onChange={(e) => setNewOffer(e.target.value)}
             placeholder="Offer name"
           />
@@ -435,7 +453,7 @@ function App() {
               <ul>
                 {tariffTypes.map((t) => (
                   <li key={t.id}>
-                    {t.name} <button onClick={() => deleteTariffType(t.id)}>Delete</button>
+                    {t.label} <button onClick={() => deleteTariffType(t.id)}>Delete</button>
                   </li>
                 ))}
               </ul>
@@ -444,7 +462,7 @@ function App() {
               <input
                 value={newTariffType}
                 onChange={(e) => setNewTariffType(e.target.value)}
-                placeholder="Tariff type name"
+                placeholder="Tariff type code (e.g., HC, HP, BASE)"
               />
               <button onClick={createTariffType}>Add Type</button>
 
@@ -463,7 +481,7 @@ function App() {
                 <option value="">-- Select Tariff Type --</option>
                 {tariffTypes.map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.name}
+                    {t.label}
                   </option>
                 ))}
               </select>
@@ -478,22 +496,54 @@ function App() {
               {prices.length === 0 ? (
                 <p>No prices found for this offer.</p>
               ) : (
-                <div>
+                <div style={{ marginTop: 20 }}>
                   {tariffTypes.map((tariffType) => {
                     const tariffPrices = prices.filter(p => p.tariffTypeId === tariffType.id);
                     if (tariffPrices.length === 0) return null;
+                    const componentCodes = Array.from(new Set(tariffPrices.map((p) => p.component?.code).filter(Boolean)));
                     return (
-                      <div key={tariffType.id} style={{ marginBottom: 20 }}>
-                        <h4>{tariffType.name}</h4>
-                        <ul>
-                          {tariffPrices.map((price) => (
-                            <li key={price.id}>
-                              {price.priceKwh} €/kWh - Valid from: {new Date(price.validFrom).toLocaleDateString()}
-                              {price.validTo && ` to ${new Date(price.validTo).toLocaleDateString()}`}
-                              <button onClick={() => deletePrice(price.id)}>Delete</button>
-                            </li>
-                          ))}
-                        </ul>
+                      <div key={tariffType.id} style={{ marginBottom: 30, padding: 10, border: '1px solid #ddd' }}>
+                        <h4>{tariffType.label}</h4>
+                        
+                        {/* Group by component using actual backend values */}
+                        {componentCodes.map((componentCode) => {
+                          const componentPrices = tariffPrices.filter(p => p.component?.code === componentCode);
+                          if (componentPrices.length === 0) return null;
+                          const componentName = componentPrices[0].component?.label || componentCode;
+                          const powerCodes = Array.from(new Set(componentPrices.map((p) => p.meterPower?.code).filter(Boolean)));
+                          
+                          return (
+                            <div key={componentCode} style={{ marginBottom: 20, paddingLeft: 20 }}>
+                              <h5>{componentName}</h5>
+                              
+                              {/* Group by meter power */}
+                              {powerCodes.map((powerCode) => {
+                                const powerPrices = componentPrices.filter(p => p.meterPower?.code === powerCode);
+                                if (powerPrices.length === 0) return null;
+                                
+                                return (
+                                  <div key={powerCode} style={{ marginBottom: 15, paddingLeft: 20 }}>
+                                    <h6>Power: {powerCode} ({powerPrices[0].meterPower?.kva} kVA)</h6>
+                                    <ul style={{ listStyle: 'none', padding: 0 }}>
+                                      {powerPrices.map((price) => (
+                                        <li key={price.id} style={{ marginBottom: 10, paddingLeft: 10 }}>
+                                          <strong>{price.priceHt}€ HT / {price.priceTtc}€ TTC</strong>
+                                          <br />
+                                          <small>
+                                            Valid from: {new Date(price.startDate).toLocaleDateString()}
+                                            {price.endDate && ` to ${new Date(price.endDate).toLocaleDateString()}`}
+                                          </small>
+                                          <br />
+                                          <button onClick={() => deletePrice(price.id)} style={{ marginTop: 5 }}>Delete</button>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })}

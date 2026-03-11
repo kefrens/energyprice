@@ -1,58 +1,100 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "sqlite" // dev
   url      = env("DATABASE_URL")
 }
 
 model Supplier {
-  id       Int     @id @default(autoincrement())
-  name     String  @unique
-  active   Boolean @default(true)
+  id          Int     @id @default(autoincrement())
+  code        String  @unique
+  name        String
+  createdAt   DateTime
+  closedAt    DateTime?
+  active      Boolean
   logoUrl  String?
-  offers   Offer[]
+  offers      Offer[]
 }
 
 model Offer {
-  id          Int      @id @default(autoincrement())
+  id          Int     @id @default(autoincrement())
+  code        String  @unique
   name        String
-  supplier    Supplier @relation(fields: [supplierId], references: [id])
-  supplierId  Int
-
-  startDate   DateTime @default(now())
+  startDate   DateTime
   endDate     DateTime?
-  active      Boolean  @default(true)
+  active      Boolean
 
-  tariffTypes TariffType[]
+  supplierId  Int
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
 
-  @@unique([name, supplierId])
+  options     OfferOption[]
+}
+
+model OfferOption {
+  id          Int     @id @default(autoincrement())
+  code        String
+  name        String
+  description String?
+
+  offerId     Int
+  offer       Offer @relation(fields: [offerId], references: [id])
+
+  prices      PriceComponentValue[]
+
+  @@unique([code, offerId])
+}
+
+model MeterPower {
+  id          Int     @id @default(autoincrement())
+  code        String  @unique
+  kva         Int
+
+  prices      PriceComponentValue[]
 }
 
 model TariffType {
-  id       Int     @id @default(autoincrement())
-  name     String
-  offer    Offer   @relation(fields: [offerId], references: [id])
-  offerId  Int
+  id          Int     @id @default(autoincrement())
+  code        String  @unique
+  label       String
 
-  prices   Price[]
-
-  @@unique([name, offerId])
+  prices      PriceComponentValue[]
 }
 
-model Price {
-  id            Int       @id @default(autoincrement())
-  priceKwh      Float
-  validFrom     DateTime
-  validTo       DateTime?
+model PriceComponent {
+  id          Int     @id @default(autoincrement())
+  code        String  @unique
+  label       String
 
-  tariffType    TariffType @relation(fields: [tariffTypeId], references: [id])
-  tariffTypeId  Int
+  prices      PriceComponentValue[]
+}
+
+model PriceComponentValue {
+  id              Int     @id @default(autoincrement())
+
+  priceHt         Float
+  priceTtc        Float
+
+  startDate       DateTime
+  endDate         DateTime?
+
+  offerOptionId   Int
+  offerOption     OfferOption @relation(fields: [offerOptionId], references: [id])
+
+  meterPowerId    Int
+  meterPower      MeterPower @relation(fields: [meterPowerId], references: [id])
+
+  componentId     Int
+  component       PriceComponent @relation(fields: [componentId], references: [id])
+
+  tariffTypeId    Int
+  tariffType      TariffType @relation(fields: [tariffTypeId], references: [id])
+}
+
+model ConsumptionProfile {
+  id          Int     @id @default(autoincrement())
+  code        String  @unique
+  description String
+  annualKwh   Int
 }

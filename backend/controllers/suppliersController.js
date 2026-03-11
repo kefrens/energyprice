@@ -15,15 +15,17 @@ async function listSuppliers(req, res) {
 
 async function createSupplier(req, res) {
   try {
-    const { name, active, logoUrl } = req.body;
+    const { code, name, active, logoUrl } = req.body;
 
-    if (!name) {
-      return res.status(400).json({ error: "Name is required" });
+    if (!code || !name) {
+      return res.status(400).json({ error: "Code and name are required" });
     }
 
     const supplier = await prisma.supplier.create({
-      data: { 
+      data: {
+        code,
         name,
+        createdAt: new Date(),
         active: active !== undefined ? active : true,
         logoUrl: logoUrl || null
       },
@@ -32,7 +34,7 @@ async function createSupplier(req, res) {
     res.json(supplier);
   } catch (error) {
     if (error.code === "P2002") {
-      return res.status(409).json({ error: "Supplier already exists" });
+      return res.status(409).json({ error: "Supplier code already exists" });
     }
 
     console.error(error);

@@ -28,17 +28,18 @@ async function getOffersBySupplier(req, res) {
 
 async function createOffer(req, res) {
   try {
-    const { name, supplierId, startDate, endDate, active } = req.body;
+    const { code, name, supplierId, startDate, endDate, active } = req.body;
 
-    if (!name || !supplierId) {
-      return res.status(400).json({ error: "Missing fields" });
+    if (!code || !name || !supplierId) {
+      return res.status(400).json({ error: "Code, name, and supplierId are required" });
     }
 
     const offer = await prisma.offer.create({
       data: {
+        code,
         name,
         supplierId: parseInt(supplierId, 10),
-        startDate: startDate ? new Date(startDate) : undefined,
+        startDate: startDate ? new Date(startDate) : new Date(),
         endDate: endDate ? new Date(endDate) : null,
         active: active !== undefined ? active : true,
       },
@@ -46,15 +47,13 @@ async function createOffer(req, res) {
 
     res.json(offer);
   } catch (error) {
+    if (error.code === "P2002") {
+      return res.status(409).json({ error: "Offer code already exists" });
+    }
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
   }
 }
-
-module.exports = {
-  getOffersBySupplier,
-  createOffer,
-};
 
 // Update offer by ID
 async function updateOffer(req, res) {
@@ -86,7 +85,6 @@ async function updateOffer(req, res) {
   }
 }
 
-module.exports.updateOffer = updateOffer;
 
 // Delete offer by ID
 async function deleteOffer(req, res) {
@@ -109,4 +107,10 @@ async function deleteOffer(req, res) {
   }
 }
 
-module.exports.deleteOffer = deleteOffer;
+module.exports = {
+  getOffersBySupplier,
+  createOffer,
+  updateOffer,
+  deleteOffer,
+};
+

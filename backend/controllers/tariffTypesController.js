@@ -3,35 +3,33 @@ const prisma = new PrismaClient();
 
 async function createTariffType(req, res) {
   try {
-    const { name, offerId } = req.body;
+    const { code, label } = req.body;
 
-    if (!name || !offerId) {
-      return res.status(400).json({ error: "Missing fields" });
+    if (!code || !label) {
+      return res.status(400).json({ error: "Code and label are required" });
     }
 
     const tariffType = await prisma.tariffType.create({
       data: {
-        name,
-        offerId: parseInt(offerId, 10),
+        code,
+        label,
       },
     });
 
     res.json(tariffType);
   } catch (error) {
     if (error.code === "P2002") {
-      return res.status(409).json({ error: "Tariff type already exists" });
+      return res.status(409).json({ error: "Tariff type code already exists" });
     }
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
   }
 }
 
-async function getTariffTypesByOffer(req, res) {
+async function getTariffTypes(req, res) {
   try {
-    const offerId = parseInt(req.params.offerId, 10);
     const tariffTypes = await prisma.tariffType.findMany({
-      where: { offerId },
-      orderBy: { name: "asc" },
+      orderBy: { label: "asc" },
     });
     res.json(tariffTypes);
   } catch (error) {
@@ -42,7 +40,7 @@ async function getTariffTypesByOffer(req, res) {
 
 module.exports = {
   createTariffType,
-  getTariffTypesByOffer,
+  getTariffTypes,
 };
 // Delete tariff type by ID
 async function deleteTariffType(req, res) {

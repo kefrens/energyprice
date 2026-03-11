@@ -6,25 +6,34 @@ async function getCurrentPrice(req, res) {
   try {
     const offerId = parseInt(req.params.offerId, 10);
 
-    const prices = await prisma.price.findMany({
+    const prices = await prisma.priceComponentValue.findMany({
       where: {
-        tariffType: {
-          offerId: offerId
+        offerOption: {
+          offer: {
+            id: offerId
+          }
         },
-        validFrom: { lte: today },
-        OR: [{ validTo: null }, { validTo: { gte: today } }],
+        startDate: { lte: today },
+        OR: [{ endDate: null }, { endDate: { gte: today } }],
       },
       include: {
-        tariffType: true
+        offerOption: {
+          include: {
+            offer: true
+          }
+        },
+        component: true,
+        tariffType: true,
+        meterPower: true
       }
     });
 
-    // Group by tariff type and pick the latest valid price for each
+    // Group by offer option and pick the latest valid price for each
     const priceMap = {};
     prices.forEach(price => {
-      const typeId = price.tariffTypeId;
-      if (!priceMap[typeId] || price.validFrom > priceMap[typeId].validFrom) {
-        priceMap[typeId] = price;
+      const optionId = price.offerOptionId;
+      if (!priceMap[optionId] || price.startDate > priceMap[optionId].startDate) {
+        priceMap[optionId] = price;
       }
     });
 
@@ -85,20 +94,56 @@ async function getPriceHistory(req, res) {
   try {
     const offerId = parseInt(req.params.offerId, 10);
     // explicitly select fields to avoid errors if schema mismatch
-    const prices = await prisma.price.findMany({
+    const prices = await prisma.priceComponentValue.findMany({
       where: {
-        tariffType: {
-          offerId: offerId
+        offerOption: {
+          offer: {
+            id: offerId
+          }
         }
       },
-      orderBy: { validFrom: "asc" },
+      orderBy: { startDate: "asc" },
       select: {
         id: true,
-        priceKwh: true,
-        validFrom: true,
-        validTo: true,
+        priceHt: true,
+        priceTtc: true,
+        startDate: true,
+        endDate: true,
+        offerOptionId: true,
+        meterPowerId: true,
+        componentId: true,
         tariffTypeId: true,
-      },
+        offerOption: {
+          select: {
+            code: true,
+            name: true,
+            offer: {
+              select: {
+                code: true,
+                name: true
+              }
+            }
+          }
+        },
+        meterPower: {
+          select: {
+            code: true,
+            kva: true
+          }
+        },
+        component: {
+          select: {
+            code: true,
+            label: true
+          }
+        },
+        tariffType: {
+          select: {
+            code: true,
+            label: true
+          }
+        }
+      }
     });
     res.json(prices);
   } catch (error) {
@@ -152,13 +197,6 @@ async function getPriceByDate(req, res) {
   }
 }
 
-module.exports = {
-  getCurrentPrice,
-  createPrice,
-  getPriceHistory,
-  getPriceByDate,
-};
-// Delete price by ID
 async function deletePrice(req, res) {
   try {
     const id = parseInt(req.params.id, 10);
@@ -176,4 +214,10 @@ async function deletePrice(req, res) {
   }
 }
 
-module.exports.deletePrice = deletePrice;
+module.exports = {
+  getCurrentPrice,
+  createPrice,
+  getPriceHistory,
+  getPriceByDate,
+  deletePrice,
+};
