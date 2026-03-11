@@ -7,10 +7,12 @@ const {
   getPriceHistory,
   getPriceByDate,
   deletePrice,
+  getSubscriptionPrices,
 } = require("../controllers/pricesController");
 
-// public current price
+// public endpoints
 router.get("/current/:offerId", getCurrentPrice);
+router.get("/subscriptions", getSubscriptionPrices);
 
 // admin endpoints (assumes router may be mounted under /admin/prices)
 router.post("/:offerId", apiKey, createPrice);

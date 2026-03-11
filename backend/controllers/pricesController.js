@@ -214,10 +214,66 @@ async function deletePrice(req, res) {
   }
 }
 
+async function getSubscriptionPrices(req, res) {
+  try {
+    const { tariffType, powers, suppliers } = req.query;
+
+    const where = {
+      component: { code: "SUBSCRIPTION" },
+    };
+
+    if (tariffType) {
+      where.tariffType = { code: tariffType };
+    }
+    if (powers) {
+      where.meterPower = { code: { in: powers.split(",") } };
+    }
+    if (suppliers) {
+      where.offerOption = {
+        offer: { supplier: { code: { in: suppliers.split(",") } } },
+      };
+    }
+
+    const prices = await prisma.priceComponentValue.findMany({
+      where,
+      select: {
+        id: true,
+        priceHt: true,
+        priceTtc: true,
+        startDate: true,
+        endDate: true,
+        meterPower: { select: { code: true, kva: true } },
+        tariffType: { select: { code: true, label: true } },
+        component: { select: { code: true, label: true } },
+        offerOption: {
+          select: {
+            code: true,
+            name: true,
+            offer: {
+              select: {
+                code: true,
+                name: true,
+                supplier: { select: { code: true, name: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { startDate: "desc" },
+    });
+
+    res.json(prices);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
 module.exports = {
   getCurrentPrice,
   createPrice,
   getPriceHistory,
   getPriceByDate,
   deletePrice,
+  getSubscriptionPrices,
 };

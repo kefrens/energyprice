@@ -1,1 +1,1 @@
-[{"id":30,"code":"EKW_VERT","name":"Offre Verte","startDate":"2023-01-01T00:00:00.000Z","endDate":null,"active":true,"supplierId":26}]
+[{"id":25,"code":"EDF_TARIF_BLEU","name":"Tarif Bleu","startDate":"2000-01-01T00:00:00.000Z","endDate":null,"active":true,"supplierId":22},{"id":26,"code":"EDF_TEMPO","name":"Tempo","startDate":"2000-01-01T00:00:00.000Z","endDate":null,"active":true,"supplierId":22}]

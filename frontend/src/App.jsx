@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import SubscriptionPriceChart from "./SubscriptionPriceChart";
 
 const API_URL = "http://127.0.0.1:3000";
 const API_KEY = "mysecretkey";
@@ -273,6 +274,8 @@ function App() {
   return (
     <div style={{ padding: 40 }}>
       <h2>Admin Energy Prices</h2>
+
+      <SubscriptionPriceChart />
 
       <h3>Create Supplier</h3>
       <input
