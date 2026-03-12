@@ -7,7 +7,7 @@ const { PrismaClient } = require("@prisma/client");
 
 const prisma = new PrismaClient();
 
-const workbook = XLSX.readFile("../datas/energyprice_dataset_150_rows.xlsx");
+const workbook = XLSX.readFile("../datas/energyprice_dataset.xlsx");
 
 // Helper function to convert sheet to JSON
 function sheet(name) {
