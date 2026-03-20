@@ -1,42 +1,203 @@
 #root {
-  max-width: 1280px;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.app-shell,
+.details-page {
+  width: min(1440px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  padding: 32px 0 48px;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+.page-eyebrow {
+  margin: 0 0 8px;
+  color: #0f766e;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.page-header h2,
+.chart-card-header h3 {
+  margin: 0;
+}
+
+.page-subtitle,
+.chart-card-header p,
+.stat-card span,
+.cell-meta {
+  color: #57534e;
+}
+
+.secondary-action {
+  border: 1px solid #a8a29e;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.details-card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #d6d3d1;
+  border-radius: 18px;
+  box-shadow: 0 18px 44px rgba(120, 113, 108, 0.12);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+
+.filter-field-wide {
+  grid-column: 1 / -1;
+}
+
+.filter-field span {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #44403c;
+}
+
+.filter-field input,
+.filter-field select {
+  border: 1px solid #d6d3d1;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font: inherit;
+  background: #fff;
+  color: #1c1917;
+}
+
+.filter-field select[multiple] {
+  min-height: 132px;
+}
+
+.segmented-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.segmented-controls button,
+.secondary-action {
+  min-height: 42px;
+}
+
+.segmented-controls .is-active {
+  background: #0f766e;
+  color: #fff;
+}
+
+.details-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, rgba(240, 253, 250, 0.95), rgba(255, 247, 237, 0.95));
+  border: 1px solid rgba(13, 148, 136, 0.16);
+  border-radius: 18px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.stat-card strong {
+  font-size: 1.9rem;
+  line-height: 1;
+  color: #1c1917;
+}
+
+.chart-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.chart-note,
+.status-panel {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f5f5f4;
+  color: #44403c;
+}
+
+.status-panel-error {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.details-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.details-table th,
+.details-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e7e5e4;
+  vertical-align: top;
+}
+
+.details-table thead th {
+  position: sticky;
+  top: 0;
+  background: #fafaf9;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #57534e;
+}
+
+.details-table tbody tr:hover {
+  background: rgba(240, 253, 250, 0.45);
+}
+
+.cell-meta {
+  font-size: 0.82rem;
+}
+
+@media (max-width: 960px) {
+  .page-header,
+  .chart-card-header {
+    flex-direction: column;
   }
-  to {
-    transform: rotate(360deg);
+
+  .app-shell,
+  .details-page {
+    width: min(100%, calc(100% - 24px));
+    padding-top: 20px;
   }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
 }

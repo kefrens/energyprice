@@ -269,6 +269,129 @@ async function getSubscriptionPrices(req, res) {
   }
 }
 
+async function getPriceCatalog(req, res) {
+  try {
+    const parseIds = (value) => {
+      if (!value) {
+        return undefined;
+      }
+
+      const ids = value
+        .split(",")
+        .map((entry) => parseInt(entry, 10))
+        .filter((entry) => !Number.isNaN(entry));
+
+      return ids.length > 0 ? ids : undefined;
+    };
+
+    const supplierIds = parseIds(req.query.supplierIds);
+    const offerIds = parseIds(req.query.offerIds);
+    const tariffTypeIds = parseIds(req.query.tariffTypeIds);
+    const meterPowerIds = parseIds(req.query.meterPowerIds);
+    const componentIds = parseIds(req.query.componentIds);
+
+    const where = {};
+    const offerWhere = {};
+
+    if (supplierIds) {
+      offerWhere.supplierId = { in: supplierIds };
+    }
+
+    if (offerIds) {
+      offerWhere.id = { in: offerIds };
+    }
+
+    if (Object.keys(offerWhere).length > 0) {
+      where.offerOption = {
+        offer: offerWhere,
+      };
+    }
+
+    if (tariffTypeIds) {
+      where.tariffTypeId = { in: tariffTypeIds };
+    }
+
+    if (meterPowerIds) {
+      where.meterPowerId = { in: meterPowerIds };
+    }
+
+    if (componentIds) {
+      where.componentId = { in: componentIds };
+    }
+
+    const prices = await prisma.priceComponentValue.findMany({
+      where,
+      orderBy: [
+        { startDate: "desc" },
+        { id: "desc" },
+      ],
+      select: {
+        id: true,
+        priceHt: true,
+        priceTtc: true,
+        startDate: true,
+        endDate: true,
+        offerOptionId: true,
+        meterPowerId: true,
+        componentId: true,
+        tariffTypeId: true,
+        offerOption: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            offer: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+                active: true,
+                startDate: true,
+                endDate: true,
+                supplier: {
+                  select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                    active: true,
+                    logoUrl: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        meterPower: {
+          select: {
+            id: true,
+            code: true,
+            kva: true,
+          },
+        },
+        component: {
+          select: {
+            id: true,
+            code: true,
+            label: true,
+          },
+        },
+        tariffType: {
+          select: {
+            id: true,
+            code: true,
+            label: true,
+          },
+        },
+      },
+    });
+
+    res.json(prices);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
 module.exports = {
   getCurrentPrice,
   createPrice,
@@ -276,4 +399,5 @@ module.exports = {
   getPriceByDate,
   deletePrice,
   getSubscriptionPrices,
+  getPriceCatalog,
 };

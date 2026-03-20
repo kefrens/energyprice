@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import SubscriptionPriceChart from "./SubscriptionPriceChart";
+import PriceDetailsPage from "./PriceDetailsPage";
+import "./App.css";
 
 const API_URL = "http://127.0.0.1:3000";
 const API_KEY = "mysecretkey";
 
 function App() {
+  const [currentPage, setCurrentPage] = useState("main");
   const [suppliers, setSuppliers] = useState([]);
   const [offers, setOffers] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState("");
@@ -271,9 +274,21 @@ function App() {
 
   console.log("SUPPLIERS:", suppliers);
 
+  if (currentPage === "details") {
+    return <PriceDetailsPage onBack={() => setCurrentPage("main")} />;
+  }
+
   return (
-    <div style={{ padding: 40 }}>
-      <h2>Admin Energy Prices</h2>
+    <div className="app-shell">
+      <div className="page-header">
+        <div>
+          <p className="page-eyebrow">Admin workspace</p>
+          <h2>Admin Energy Prices</h2>
+        </div>
+        <button className="secondary-action" onClick={() => setCurrentPage("details")}>
+          Details
+        </button>
+      </div>
 
       <SubscriptionPriceChart />
 

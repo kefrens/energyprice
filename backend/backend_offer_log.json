@@ -1,1 +1,1 @@
-[{"id":41,"code":"ALPIQ_FIXE","name":"Fixe","startDate":"2023-01-01T00:00:00.000Z","endDate":null,"active":true,"supplierId":36}]
+[{"id":33,"code":"EDF_TARIF_BLEU","name":"Tarif Bleu","startDate":"2000-01-01T00:00:00.000Z","endDate":null,"active":true,"supplierId":29},{"id":34,"code":"EDF_TEMPO","name":"Tempo","startDate":"2000-01-01T00:00:00.000Z","endDate":null,"active":true,"supplierId":29}]
